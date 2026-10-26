@@ -71,8 +71,8 @@ async function resolveAndPlay() {
     }
 
     currentResolvedData = data;
-    // Streamtape works directly in browsers; MixDrop/others prefer edge proxy
-    currentMode = (data.host === "Streamtape") ? "direct" : "proxy";
+    // Both Streamtape (via streamtape_stream) and MixDrop (via proxy_stream) are optimized for edge proxy
+    currentMode = "proxy";
 
     // Update UI elements
     videoTitle.textContent = data.title || "Video Stream";

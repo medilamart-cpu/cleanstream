@@ -266,10 +266,11 @@ async function resolveStreamtape(url) {
 
       if (videoPath) {
         let cleanPath = videoPath;
-        // Always rewrite to official mirror strtape.tech to bypass ISP sinkholes on mobile networks
+        // Always rewrite to official mirror strtape.tech to bypass ISP sinkholes
         cleanPath = cleanPath.replace(/\/\/[^/]+(?=\/get_video)/, "//strtape.tech");
         const streamUrl = "https:" + cleanPath + "&stream=1";
-        const proxyUrl = `/api/proxy_stream?url=${encodeURIComponent(streamUrl)}&referer=${encodeURIComponent("https://strtape.tech/")}`;
+        // Guaranteed same-session edge streamer so token IP always matches
+        const proxyUrl = `/api/streamtape_stream?id=${encodeURIComponent(videoId)}`;
         return {
           success: true,
           stream_url: streamUrl,
