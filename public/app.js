@@ -51,6 +51,7 @@ async function resolveAndPlay() {
 
   setLoading(true);
   hideStatus();
+  hasSwitchedOnFail = false;
 
   try {
     const resp = await fetch(`/api/resolve?url=${encodeURIComponent(url)}`);
@@ -70,7 +71,8 @@ async function resolveAndPlay() {
     }
 
     currentResolvedData = data;
-    currentMode = "proxy"; // default to proxy for 100% reliable bypass
+    // Streamtape works directly in browsers; MixDrop/others prefer edge proxy
+    currentMode = (data.host === "Streamtape") ? "direct" : "proxy";
 
     // Update UI elements
     videoTitle.textContent = data.title || "Video Stream";
@@ -128,6 +130,17 @@ function loadVideoSource(isHls, proxyUrl, directUrl) {
     videoPlayer.play().catch(e => console.log("Autoplay policy:", e));
   }
 }
+
+let hasSwitchedOnFail = false;
+videoPlayer.addEventListener("error", () => {
+  if (currentResolvedData && !hasSwitchedOnFail) {
+    hasSwitchedOnFail = true;
+    currentMode = (currentMode === "proxy") ? "direct" : "proxy";
+    updateStreamModeUI();
+    showStatus(`Playback issue detected. Auto-switched to ${currentMode} mode...`, "info", 3000);
+    loadVideoSource(currentResolvedData.is_hls, currentResolvedData.proxy_url, currentResolvedData.stream_url);
+  }
+});
 
 function toggleStreamMode() {
   if (!currentResolvedData) return;
