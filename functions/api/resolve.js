@@ -228,7 +228,7 @@ async function resolveStreamtape(url) {
     return { success: false, error: "Invalid Streamtape URL or missing video ID", host: "Streamtape" };
   }
 
-  const domains = ["streamta.pe", "strtape.tech", "strcloud.link", "streamtape.net", "streamtape.com"];
+  const domains = ["strtape.tech", "strcloud.link", "streamta.pe", "streamtape.net", "streamtape.com"];
   for (const dom of domains) {
     try {
       const embedUrl = `https://${dom}/v/${videoId}`;
@@ -309,7 +309,7 @@ async function resolveMixdrop(url) {
     parsedDom = new URL(url).hostname;
   } catch (e) {}
 
-  const candidateDomains = [parsedDom, "mixdrp.click", "mxdrop.click", "mixdrop.ag", "miiixdrop.top", "mixdrop.co", "mxdrop.to", "mixdrop.is"].filter(Boolean);
+  const candidateDomains = ["mixdrp.click", "mxdrop.click", parsedDom, "mixdrop.ag", "miiixdrop.top", "mixdrop.co"].filter(Boolean);
 
   for (const currDomain of candidateDomains) {
     for (const vid of candidateIds) {
