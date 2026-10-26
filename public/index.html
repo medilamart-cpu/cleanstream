@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="referrer" content="no-referrer">
+  <title>CleanStream - Ad-Free Multi-Host Video Player</title>
+  
+  <!-- SEO & Social Meta -->
+  <meta name="description" content="Watch Streamtape, Mixdrop, Doodstream, StreamSB, and web videos ad-free without popups or redirects. Fast edge-powered player.">
+  <meta name="theme-color" content="#0a0d14">
+
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- HLS.js for HLS streams -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="glow-bg"></div>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <i class="fas fa-play"></i>
+        </div>
+        <div>
+          <h1>CleanStream</h1>
+          <span class="badge-edge">Cloudflare Edge Powered</span>
+        </div>
+      </div>
+      <p class="subtitle">Stream videos from Streamtape, MixDrop, Doodstream & more — 100% ad-free without annoying redirects.</p>
+    </header>
+
+    <!-- Main Card -->
+    <div class="card main-card">
+      <div class="input-group-wrapper">
+        <div class="input-group">
+          <div class="input-icon">
+            <i class="fas fa-link"></i>
+          </div>
+          <input 
+            type="text" 
+            id="videoUrlInput" 
+            placeholder="Paste Streamtape, Mixdrop, Doodstream or video URL..." 
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <button class="btn-paste" id="pasteBtn" title="Paste link from clipboard">
+            <i class="fas fa-paste"></i>
+            <span>Paste</span>
+          </button>
+        </div>
+
+        <button class="btn-primary" id="playBtn" onclick="resolveAndPlay()">
+          <span class="btn-text">
+            <i class="fas fa-play"></i>
+            <span>Play Video</span>
+          </span>
+          <span class="btn-loader" style="display: none;">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span>Resolving...</span>
+          </span>
+        </button>
+      </div>
+
+      <!-- Quick Sample Chips -->
+      <div class="sample-links">
+        <span class="sample-label">Quick Test:</span>
+        <span class="sample-chip" onclick="setDemo('https://streamtape.com/v/qraxMqwboYcyrR')">
+          <i class="fas fa-bolt"></i> Streamtape
+        </span>
+        <span class="sample-chip" onclick="setDemo('https://mxdrop.click/f/4ddrqwwzaolqxl')">
+          <i class="fas fa-bolt"></i> Mixdrop
+        </span>
+        <span class="sample-chip" onclick="setDemo('https://playmogo.com/d/uy47m01f2ibd')">
+          <i class="fas fa-bolt"></i> Doodstream
+        </span>
+      </div>
+
+      <!-- Status Alert Box -->
+      <div id="statusAlert" class="status-alert" style="display: none;"></div>
+    </div>
+
+    <!-- Video Player Section (Hidden until resolved) -->
+    <div class="card player-card" id="playerCard" style="display: none;">
+      <div class="player-header">
+        <div class="video-info">
+          <h2 id="videoTitle">Video Title</h2>
+          <div class="video-meta">
+            <span class="host-badge" id="hostBadge">Host</span>
+            <span class="stream-type-badge" id="streamTypeBadge">MP4</span>
+            <span class="proxy-badge" id="proxyBadge"><i class="fas fa-shield-alt"></i> Edge Proxy Active</span>
+          </div>
+        </div>
+        <div class="player-actions">
+          <button class="action-btn" id="streamToggleBtn" onclick="toggleStreamMode()" title="Switch between Proxy & Direct Stream">
+            <i class="fas fa-random"></i> <span id="streamToggleText">Use Direct</span>
+          </button>
+          <button class="action-btn" onclick="copyStreamUrl()" title="Copy direct stream link">
+            <i class="fas fa-copy"></i> Copy Link
+          </button>
+          <a class="action-btn" id="openExternalBtn" href="#" target="_blank" title="Open in new browser tab">
+            <i class="fas fa-external-link-alt"></i> External
+          </a>
+        </div>
+      </div>
+
+      <div class="video-wrapper">
+        <video id="cleanVideoPlayer" controls playsinline preload="auto">
+          Your browser does not support HTML5 video.
+        </video>
+      </div>
+    </div>
+
+    <!-- Features & Supported Hosts Grid -->
+    <section class="hosts-section">
+      <h3>Supported Video Platforms</h3>
+      <div class="hosts-grid">
+        <div class="host-item">
+          <div class="host-icon"><i class="fas fa-tape"></i></div>
+          <div class="host-name">Streamtape</div>
+          <div class="host-desc">strtape.tech & streamta.pe bypass</div>
+        </div>
+        <div class="host-item">
+          <div class="host-icon"><i class="fas fa-cloud-download-alt"></i></div>
+          <div class="host-name">MixDrop</div>
+          <div class="host-desc">mxdrop, mixdrp & Dean Edwards unpacker</div>
+        </div>
+        <div class="host-item">
+          <div class="host-icon"><i class="fas fa-film"></i></div>
+          <div class="host-name">DoodStream</div>
+          <div class="host-desc">playmogo.com, dood.to & pass_md5</div>
+        </div>
+        <div class="host-item">
+          <div class="host-icon"><i class="fas fa-play-circle"></i></div>
+          <div class="host-name">StreamSB</div>
+          <div class="host-desc">javclan.com & HLS unpacker</div>
+        </div>
+        <div class="host-item">
+          <div class="host-icon"><i class="fas fa-bolt"></i></div>
+          <div class="host-name">StreamVO (VOE)</div>
+          <div class="host-desc">javlesbians.com / VOE decoder</div>
+        </div>
+        <div class="host-item">
+          <div class="host-icon"><i class="fas fa-compress-arrows-alt"></i></div>
+          <div class="host-name">Gateways</div>
+          <div class="host-desc">jav.guru searcho & redirect resolver</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>CleanStream &bull; Zero Ads &bull; Zero Popups &bull; Cloudflare Edge CDN</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
