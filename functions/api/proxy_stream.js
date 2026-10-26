@@ -52,7 +52,7 @@ export async function onRequest(context) {
     });
 
     const responseHeaders = new Headers();
-    responseHeaders.set("Access-Control-Allow-Origin": "*");
+    responseHeaders.set("Access-Control-Allow-Origin", "*");
     responseHeaders.set("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges, Content-Type");
     responseHeaders.set("Accept-Ranges", "bytes");
 
