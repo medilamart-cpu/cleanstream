@@ -275,6 +275,8 @@ async function resolveStreamtape(url) {
           success: true,
           stream_url: streamUrl,
           proxy_url: proxyUrl,
+          embed_url: `https://strtape.tech/e/${encodeURIComponent(videoId)}`,
+          video_id: videoId,
           title,
           host: "Streamtape",
           is_hls: false,

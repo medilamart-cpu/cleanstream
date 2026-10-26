@@ -86,7 +86,7 @@ async function resolveAndPlay() {
     showStatus(`Successfully extracted ${data.host} stream! Starting playback...`, "success", 4000);
 
     // Play video
-    loadVideoSource(data.is_hls, data.proxy_url, data.stream_url);
+    loadVideoSource(data.is_hls, data.proxy_url, data.stream_url, data.embed_url);
 
     // Smooth scroll to player
     setTimeout(() => {
@@ -100,11 +100,9 @@ async function resolveAndPlay() {
   }
 }
 
-function loadVideoSource(isHls, proxyUrl, directUrl) {
-  const absProxyUrl = proxyUrl ? (proxyUrl.startsWith("http") ? proxyUrl : window.location.origin + proxyUrl) : "";
-  const activeUrl = (currentMode === "proxy" && absProxyUrl) ? absProxyUrl : directUrl;
-  openExternalBtn.href = directUrl || activeUrl;
+const iframePlayer = document.getElementById("cleanIframePlayer");
 
+function loadVideoSource(isHls, proxyUrl, directUrl, embedUrl) {
   const overlay = document.getElementById("tapToPlayOverlay");
   if (overlay) overlay.style.display = "none";
 
@@ -112,6 +110,29 @@ function loadVideoSource(isHls, proxyUrl, directUrl) {
     hlsInstance.destroy();
     hlsInstance = null;
   }
+
+  // If host provides a sandboxed unblocked embed (like Streamtape):
+  if (embedUrl) {
+    videoPlayer.pause();
+    videoPlayer.removeAttribute("src");
+    videoPlayer.style.display = "none";
+    iframePlayer.style.display = "block";
+    iframePlayer.src = embedUrl;
+    proxyBadge.innerHTML = '<i class="fas fa-shield-alt"></i> Ad-Blocked Embed';
+    streamToggleBtn.style.display = "none";
+    openExternalBtn.href = embedUrl;
+    return;
+  }
+
+  // Native HTML5 Player (MixDrop, Doodstream, StreamSB, etc.)
+  iframePlayer.style.display = "none";
+  iframePlayer.src = "";
+  videoPlayer.style.display = "block";
+  streamToggleBtn.style.display = "inline-flex";
+
+  const absProxyUrl = proxyUrl ? (proxyUrl.startsWith("http") ? proxyUrl : window.location.origin + proxyUrl) : "";
+  const activeUrl = (currentMode === "proxy" && absProxyUrl) ? absProxyUrl : directUrl;
+  openExternalBtn.href = directUrl || activeUrl;
 
   if (isHls) {
     if (Hls.isSupported()) {
@@ -175,7 +196,7 @@ function toggleStreamMode() {
   if (!currentResolvedData) return;
   currentMode = currentMode === "proxy" ? "direct" : "proxy";
   updateStreamModeUI();
-  loadVideoSource(currentResolvedData.is_hls, currentResolvedData.proxy_url, currentResolvedData.stream_url);
+  loadVideoSource(currentResolvedData.is_hls, currentResolvedData.proxy_url, currentResolvedData.stream_url, null);
 }
 
 function updateStreamModeUI() {
