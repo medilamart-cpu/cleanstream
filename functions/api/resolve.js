@@ -265,8 +265,11 @@ async function resolveStreamtape(url) {
       }
 
       if (videoPath) {
-        const streamUrl = "https:" + videoPath + "&stream=1";
-        const proxyUrl = `/api/proxy_stream?url=${encodeURIComponent(streamUrl)}&referer=${encodeURIComponent(`https://${dom}/`)}`;
+        let cleanPath = videoPath;
+        // Always rewrite to official mirror strtape.tech to bypass ISP sinkholes on mobile networks
+        cleanPath = cleanPath.replace(/\/\/[^/]+(?=\/get_video)/, "//strtape.tech");
+        const streamUrl = "https:" + cleanPath + "&stream=1";
+        const proxyUrl = `/api/proxy_stream?url=${encodeURIComponent(streamUrl)}&referer=${encodeURIComponent("https://strtape.tech/")}`;
         return {
           success: true,
           stream_url: streamUrl,

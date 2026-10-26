@@ -399,6 +399,49 @@ html, body {
   outline: none;
 }
 
+.tap-play-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: opacity 0.2s ease;
+}
+
+.tap-play-btn {
+  width: 68px;
+  height: 68px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: #fff;
+  margin-bottom: 12px;
+  box-shadow: 0 0 30px var(--accent-glow);
+  padding-left: 4px;
+  transition: transform 0.2s ease;
+}
+
+.tap-play-overlay:hover .tap-play-btn {
+  transform: scale(1.08);
+}
+
+.tap-play-overlay span {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+
 /* Supported Hosts Section */
 .hosts-section {
   margin-top: 36px;

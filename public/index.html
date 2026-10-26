@@ -114,9 +114,15 @@
       </div>
 
       <div class="video-wrapper">
-        <video id="cleanVideoPlayer" controls playsinline preload="auto">
+        <video id="cleanVideoPlayer" controls playsinline webkit-playsinline x5-playsinline preload="metadata">
           Your browser does not support HTML5 video.
         </video>
+        <div id="tapToPlayOverlay" class="tap-play-overlay" style="display: none;" onclick="triggerManualPlay()">
+          <div class="tap-play-btn">
+            <i class="fas fa-play"></i>
+          </div>
+          <span>Tap to Play Video</span>
+        </div>
       </div>
     </div>
 
