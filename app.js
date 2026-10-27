@@ -1,6 +1,33 @@
 let currentResolvedData = null;
 let currentMode = "proxy"; // "proxy" or "direct"
-let hlsInstance = null;
+let player = null;
+
+function getPlayer() {
+  if (!player) {
+    player = videojs("cleanVideoPlayer", {
+      controls: true,
+      fluid: true,
+      playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
+      controlBar: {
+        pictureInPictureToggle: true,
+        volumePanel: { inline: false }
+      }
+    });
+
+    player.on("error", () => {
+      console.log("Video.js error event:", player.error());
+      const isDirectForbidden = currentResolvedData && (currentResolvedData.host === "MixDrop" || currentResolvedData.host === "Doodstream");
+      if (currentResolvedData && !isDirectForbidden && !hasSwitchedOnFail) {
+        hasSwitchedOnFail = true;
+        currentMode = (currentMode === "proxy") ? "direct" : "proxy";
+        updateStreamModeUI();
+        showStatus(`Network issue detected. Retrying via ${currentMode} mode...`, "info", 3000);
+        loadVideoSource(currentResolvedData.is_hls, currentResolvedData.proxy_url, currentResolvedData.stream_url);
+      }
+    });
+  }
+  return player;
+}
 
 // DOM Elements
 const videoInput = document.getElementById("videoUrlInput");
@@ -103,19 +130,12 @@ async function resolveAndPlay() {
 const iframePlayer = document.getElementById("cleanIframePlayer");
 
 function loadVideoSource(isHls, proxyUrl, directUrl, embedUrl) {
-  const overlay = document.getElementById("tapToPlayOverlay");
-  if (overlay) overlay.style.display = "none";
-
-  if (hlsInstance) {
-    hlsInstance.destroy();
-    hlsInstance = null;
-  }
+  const vPlayer = getPlayer();
 
   // If host provides a sandboxed unblocked embed (like Streamtape):
   if (embedUrl) {
-    videoPlayer.pause();
-    videoPlayer.removeAttribute("src");
-    videoPlayer.style.display = "none";
+    vPlayer.pause();
+    vPlayer.hide();
     iframePlayer.style.display = "block";
     iframePlayer.src = embedUrl;
     proxyBadge.innerHTML = '<i class="fas fa-shield-alt"></i> Ad-Blocked Embed';
@@ -124,73 +144,27 @@ function loadVideoSource(isHls, proxyUrl, directUrl, embedUrl) {
     return;
   }
 
-  // Native HTML5 Player (MixDrop, Doodstream, StreamSB, etc.)
+  // Video.js Player (MixDrop, Doodstream, StreamSB, VOE, etc.)
   iframePlayer.style.display = "none";
   iframePlayer.src = "";
-  videoPlayer.style.display = "block";
+  vPlayer.show();
   streamToggleBtn.style.display = "inline-flex";
 
   const absProxyUrl = proxyUrl ? (proxyUrl.startsWith("http") ? proxyUrl : window.location.origin + proxyUrl) : "";
   const activeUrl = (currentMode === "proxy" && absProxyUrl) ? absProxyUrl : directUrl;
   openExternalBtn.href = directUrl || activeUrl;
 
-  if (isHls) {
-    if (Hls.isSupported()) {
-      hlsInstance = new Hls({
-        debug: false,
-        enableWorker: true,
-      });
-      hlsInstance.loadSource(activeUrl);
-      hlsInstance.attachMedia(videoPlayer);
-      hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-        attemptPlay();
-      });
-    } else if (videoPlayer.canPlayType("application/vnd.apple.mpegurl")) {
-      // Native Safari HLS
-      videoPlayer.src = activeUrl;
-      videoPlayer.load();
-      attemptPlay();
-    }
-  } else {
-    videoPlayer.src = activeUrl;
-    videoPlayer.load(); // CRITICAL for mobile Safari and Chrome
-    attemptPlay();
-  }
-}
+  vPlayer.src({
+    src: activeUrl,
+    type: isHls ? "application/x-mpegURL" : "video/mp4"
+  });
 
-function attemptPlay() {
-  const overlay = document.getElementById("tapToPlayOverlay");
-  const playPromise = videoPlayer.play();
-  if (playPromise !== undefined) {
-    playPromise.then(() => {
-      if (overlay) overlay.style.display = "none";
-    }).catch(err => {
+  vPlayer.ready(() => {
+    vPlayer.play().catch(err => {
       console.log("Autoplay policy prevented audio/play:", err);
-      // On mobile browsers, user gesture is required: show tap overlay
-      if (overlay) overlay.style.display = "flex";
     });
-  }
+  });
 }
-
-function triggerManualPlay() {
-  const overlay = document.getElementById("tapToPlayOverlay");
-  if (overlay) overlay.style.display = "none";
-  videoPlayer.play().catch(e => console.log("Manual play error:", e));
-}
-
-let hasSwitchedOnFail = false;
-videoPlayer.addEventListener("error", () => {
-  console.log("Video error event:", videoPlayer.error);
-  // Never switch MixDrop or Doodstream to direct mode because direct mode returns 403 on them
-  const isDirectForbidden = currentResolvedData && (currentResolvedData.host === "MixDrop" || currentResolvedData.host === "Doodstream");
-  if (currentResolvedData && !isDirectForbidden && !hasSwitchedOnFail) {
-    hasSwitchedOnFail = true;
-    currentMode = (currentMode === "proxy") ? "direct" : "proxy";
-    updateStreamModeUI();
-    showStatus(`Network issue detected. Retrying via ${currentMode} mode...`, "info", 3000);
-    loadVideoSource(currentResolvedData.is_hls, currentResolvedData.proxy_url, currentResolvedData.stream_url);
-  }
-});
 
 function toggleStreamMode() {
   if (!currentResolvedData) return;

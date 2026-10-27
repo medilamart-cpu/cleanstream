@@ -16,10 +16,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   
-  <!-- HLS.js for HLS streams -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <!-- Video.js Player -->
+  <link href="https://vjs.zencdn.net/8.16.1/video-js.css" rel="stylesheet" />
+  <script src="https://vjs.zencdn.net/8.16.1/video.min.js"></script>
 
-  <link rel="stylesheet" href="style.css?v=20261026_4">
+  <link rel="stylesheet" href="style.css?v=20261027_1">
 </head>
 <body>
   <div class="glow-bg"></div>
@@ -114,16 +115,8 @@
       </div>
 
       <div class="video-wrapper">
-        <video id="cleanVideoPlayer" controls playsinline webkit-playsinline x5-playsinline preload="metadata">
-          Your browser does not support HTML5 video.
-        </video>
+        <video-js id="cleanVideoPlayer" class="video-js vjs-big-play-centered vjs-fluid" controls preload="auto" playsinline webkit-playsinline></video-js>
         <iframe id="cleanIframePlayer" frameborder="0" allowfullscreen allow="autoplay; fullscreen" sandbox="allow-scripts allow-same-origin allow-presentation" style="display: none; width: 100%; height: 100%; border: none;"></iframe>
-        <div id="tapToPlayOverlay" class="tap-play-overlay" style="display: none;" onclick="triggerManualPlay()">
-          <div class="tap-play-btn">
-            <i class="fas fa-play"></i>
-          </div>
-          <span>Tap to Play Video</span>
-        </div>
       </div>
     </div>
 
