@@ -1,33 +1,6 @@
 let currentResolvedData = null;
 let currentMode = "proxy"; // "proxy" or "direct"
-let player = null;
-
-function getPlayer() {
-  if (!player) {
-    player = videojs("cleanVideoPlayer", {
-      controls: true,
-      fluid: true,
-      playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
-      controlBar: {
-        pictureInPictureToggle: true,
-        volumePanel: { inline: false }
-      }
-    });
-
-    player.on("error", () => {
-      console.log("Video.js error event:", player.error());
-      const isDirectForbidden = currentResolvedData && (currentResolvedData.host === "MixDrop" || currentResolvedData.host === "Doodstream");
-      if (currentResolvedData && !isDirectForbidden && !hasSwitchedOnFail) {
-        hasSwitchedOnFail = true;
-        currentMode = (currentMode === "proxy") ? "direct" : "proxy";
-        updateStreamModeUI();
-        showStatus(`Network issue detected. Retrying via ${currentMode} mode...`, "info", 3000);
-        loadVideoSource(currentResolvedData.is_hls, currentResolvedData.proxy_url, currentResolvedData.stream_url);
-      }
-    });
-  }
-  return player;
-}
+let hasSwitchedOnFail = false;
 
 // DOM Elements
 const videoInput = document.getElementById("videoUrlInput");
@@ -35,7 +8,9 @@ const pasteBtn = document.getElementById("pasteBtn");
 const playBtn = document.getElementById("playBtn");
 const statusAlert = document.getElementById("statusAlert");
 const playerCard = document.getElementById("playerCard");
-const videoPlayer = document.getElementById("cleanVideoPlayer");
+const cleanPlayer = document.getElementById("cleanPlayer");
+const cleanSkin = document.getElementById("cleanSkin");
+const iframePlayer = document.getElementById("cleanIframePlayer");
 const videoTitle = document.getElementById("videoTitle");
 const hostBadge = document.getElementById("hostBadge");
 const streamTypeBadge = document.getElementById("streamTypeBadge");
@@ -98,7 +73,6 @@ async function resolveAndPlay() {
     }
 
     currentResolvedData = data;
-    // Both Streamtape (via streamtape_stream) and MixDrop (via proxy_stream) are optimized for edge proxy
     currentMode = "proxy";
 
     // Update UI elements
@@ -127,15 +101,11 @@ async function resolveAndPlay() {
   }
 }
 
-const iframePlayer = document.getElementById("cleanIframePlayer");
-
 function loadVideoSource(isHls, proxyUrl, directUrl, embedUrl) {
-  const vPlayer = getPlayer();
-
-  // If host provides a sandboxed unblocked embed (like Streamtape):
+  // If host provides a sandboxed unblocked embed (e.g. Streamtape fallback):
   if (embedUrl) {
-    vPlayer.pause();
-    vPlayer.hide();
+    if (cleanPlayer) cleanPlayer.style.display = "none";
+    if (cleanSkin) cleanSkin.innerHTML = "";
     iframePlayer.style.display = "block";
     iframePlayer.src = embedUrl;
     proxyBadge.innerHTML = '<i class="fas fa-shield-alt"></i> Ad-Blocked Embed';
@@ -144,26 +114,39 @@ function loadVideoSource(isHls, proxyUrl, directUrl, embedUrl) {
     return;
   }
 
-  // Video.js Player (MixDrop, Doodstream, StreamSB, VOE, etc.)
+  // Native Video.js 10 Player (MixDrop, Doodstream, StreamSB, VOE, direct MP4, HLS, etc.)
   iframePlayer.style.display = "none";
   iframePlayer.src = "";
-  vPlayer.show();
+  if (cleanPlayer) cleanPlayer.style.display = "block";
   streamToggleBtn.style.display = "inline-flex";
 
   const absProxyUrl = proxyUrl ? (proxyUrl.startsWith("http") ? proxyUrl : window.location.origin + proxyUrl) : "";
   const activeUrl = (currentMode === "proxy" && absProxyUrl) ? absProxyUrl : directUrl;
   openExternalBtn.href = directUrl || activeUrl;
 
-  vPlayer.src({
-    src: activeUrl,
-    type: isHls ? "application/x-mpegURL" : "video/mp4"
-  });
+  if (cleanSkin) {
+    cleanSkin.innerHTML = isHls
+      ? `<hlsjs-video id="cleanVideoPlayer" src="${activeUrl}" playsinline autoplay controls></hlsjs-video>`
+      : `<video id="cleanVideoPlayer" src="${activeUrl}" playsinline autoplay controls></video>`;
 
-  vPlayer.ready(() => {
-    vPlayer.play().catch(err => {
-      console.log("Autoplay policy prevented audio/play:", err);
-    });
-  });
+    const mediaEl = cleanSkin.querySelector("#cleanVideoPlayer");
+    if (mediaEl) {
+      mediaEl.addEventListener("error", (e) => {
+        console.log("Video.js 10 media element error:", e);
+        const isDirectForbidden = currentResolvedData && (currentResolvedData.host === "MixDrop" || currentResolvedData.host === "Doodstream");
+        if (currentResolvedData && !isDirectForbidden && !hasSwitchedOnFail) {
+          hasSwitchedOnFail = true;
+          currentMode = (currentMode === "proxy") ? "direct" : "proxy";
+          updateStreamModeUI();
+          showStatus(`Network issue detected. Retrying via ${currentMode} mode...`, "info", 3000);
+          loadVideoSource(currentResolvedData.is_hls, currentResolvedData.proxy_url, currentResolvedData.stream_url);
+        }
+      });
+      mediaEl.play().catch(err => {
+        console.log("Autoplay policy prevented audio/play:", err);
+      });
+    }
+  }
 }
 
 function toggleStreamMode() {
