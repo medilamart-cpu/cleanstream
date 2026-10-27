@@ -126,8 +126,8 @@ function loadVideoSource(isHls, proxyUrl, directUrl, embedUrl) {
 
   if (cleanSkin) {
     cleanSkin.innerHTML = isHls
-      ? `<hlsjs-video id="cleanVideoPlayer" src="${activeUrl}" playsinline autoplay controls></hlsjs-video>`
-      : `<video id="cleanVideoPlayer" src="${activeUrl}" playsinline autoplay controls></video>`;
+      ? `<hlsjs-video id="cleanVideoPlayer" src="${activeUrl}" playsinline autoplay></hlsjs-video>`
+      : `<video id="cleanVideoPlayer" src="${activeUrl}" playsinline autoplay></video>`;
 
     const mediaEl = cleanSkin.querySelector("#cleanVideoPlayer");
     if (mediaEl) {
