@@ -262,3 +262,221 @@ videoInput.addEventListener("keydown", (e) => {
     resolveAndPlay();
   }
 });
+
+// =============================================================================
+// NATIVE DEVICE PLAYER FULLSCREEN ENGINE (iOS AVPlayer & Android Native Video)
+// =============================================================================
+(function() {
+  function detectPlatform() {
+    const ua = navigator.userAgent || navigator.vendor || window.opera || "";
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/i.test(ua);
+    return { isIOS, isAndroid };
+  }
+
+  function getActiveVideo() {
+    const v = document.getElementById("cleanVideoPlayer") || document.getElementById("videoElement");
+    if (v) {
+      if (v.tagName && v.tagName.toLowerCase() === "video") return v;
+      if (v.shadowRoot) {
+        const sv = v.shadowRoot.querySelector("video");
+        if (sv) return sv;
+      }
+      const iv = v.querySelector("video");
+      if (iv) return iv;
+    }
+    return document.querySelector("video");
+  }
+
+  function openInNativeDevicePlayer(video) {
+    if (!video) video = getActiveVideo();
+    if (!video) return false;
+
+    const { isIOS, isAndroid } = detectPlatform();
+
+    if (!video.hasAttribute("playsinline")) video.setAttribute("playsinline", "");
+    if (!video.hasAttribute("webkit-playsinline")) video.setAttribute("webkit-playsinline", "");
+
+    const wasPlaying = !video.paused && !video.ended;
+
+    // 1. iOS: Native AVPlayer Fullscreen Experience
+    if (isIOS) {
+      if (typeof video.webkitEnterFullscreen === "function") {
+        try {
+          const onBeginIOS = function() {
+            video.removeEventListener("webkitbeginfullscreen", onBeginIOS);
+            syncFullscreenUI(true);
+            if (wasPlaying && video.paused) {
+              video.play().catch(() => {});
+            }
+          };
+          video.addEventListener("webkitbeginfullscreen", onBeginIOS);
+
+          const onExitIOS = function() {
+            video.removeEventListener("webkitendfullscreen", onExitIOS);
+            syncFullscreenUI(false);
+            if (!video.paused) {
+              video.play().catch(() => {});
+            }
+          };
+          video.addEventListener("webkitendfullscreen", onExitIOS);
+
+          video.webkitEnterFullscreen();
+          return true;
+        } catch (err) {
+          console.warn("[CleanStream] iOS webkitEnterFullscreen error:", err);
+        }
+      }
+    }
+
+    // 2. Android: Native Video Fullscreen Experience
+    if (isAndroid) {
+      const reqVideoFs = video.requestFullscreen ||
+                         video.webkitRequestFullscreen ||
+                         video.webkitEnterFullscreen;
+
+      if (typeof reqVideoFs === "function") {
+        try {
+          const onFsChange = function() {
+            const isFs = document.fullscreenElement === video ||
+                         document.webkitFullscreenElement === video;
+            syncFullscreenUI(isFs);
+            if (!isFs) {
+              document.removeEventListener("fullscreenchange", onFsChange);
+              document.removeEventListener("webkitfullscreenchange", onFsChange);
+              if (wasPlaying && video.paused) {
+                video.play().catch(() => {});
+              }
+            }
+          };
+          document.addEventListener("fullscreenchange", onFsChange);
+          document.addEventListener("webkitfullscreenchange", onFsChange);
+
+          const promise = reqVideoFs.call(video);
+          if (promise && typeof promise.catch === "function") {
+            promise.catch((err) => {
+              console.warn("[CleanStream] Android video.requestFullscreen rejected:", err);
+              fallbackFullscreen(video);
+            });
+          }
+          return true;
+        } catch (err) {
+          console.warn("[CleanStream] Android video fullscreen call failed:", err);
+        }
+      }
+    }
+
+    // 3. Fallback: Standard fullscreen on video or container
+    return fallbackFullscreen(video);
+  }
+
+  function fallbackFullscreen(video) {
+    if (!video) video = getActiveVideo();
+    const req = video && (video.requestFullscreen || video.webkitRequestFullscreen || video.webkitEnterFullscreen);
+    if (req) {
+      try {
+        const p = req.call(video);
+        if (p && p.catch) {
+          p.catch(() => fallbackContainer());
+        }
+        return true;
+      } catch (e) {}
+    }
+    return fallbackContainer();
+
+    function fallbackContainer() {
+      const cont = document.getElementById("cleanPlayer") ||
+                   document.getElementById("playerCard") ||
+                   document.documentElement;
+      const reqCont = cont && (cont.requestFullscreen || cont.webkitRequestFullscreen || cont.mozRequestFullScreen || cont.msRequestFullscreen);
+      if (reqCont) {
+        try {
+          reqCont.call(cont);
+          return true;
+        } catch (e) {}
+      }
+      return false;
+    }
+  }
+
+  function syncFullscreenUI(isFs) {
+    const buttons = document.querySelectorAll("media-fullscreen-button, .media-fullscreen-button");
+    buttons.forEach((btn) => {
+      if (isFs) {
+        btn.setAttribute("data-fullscreen", "");
+      } else {
+        btn.removeAttribute("data-fullscreen");
+      }
+    });
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: "CLEANSTREAM_FULLSCREEN_CHANGE", isFullscreen: isFs }, "*");
+      }
+    } catch (e) {}
+  }
+
+  function handleFullscreenTrigger(e) {
+    const fsBtn = e.target.closest && e.target.closest(
+      'media-fullscreen-button, .media-fullscreen-button, [data-action="toggleFullscreen"], [aria-label*="fullscreen" i], [title*="fullscreen" i], button.vjs-fullscreen-control, .vjs-fullscreen-control'
+    );
+    if (!fsBtn) return;
+
+    const video = getActiveVideo();
+    if (!video) return;
+
+    const isCurrentlyFs = !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      video.webkitDisplayingFullscreen
+    );
+
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
+    if (isCurrentlyFs) {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (video.webkitExitFullscreen) {
+        video.webkitExitFullscreen();
+      }
+    } else {
+      openInNativeDevicePlayer(video);
+    }
+  }
+
+  window.addEventListener("click", handleFullscreenTrigger, true);
+  window.addEventListener("pointerup", handleFullscreenTrigger, true);
+  window.addEventListener("touchend", handleFullscreenTrigger, true);
+
+  window.addEventListener("message", (e) => {
+    if (e.data && (e.data.type === "CLEANSTREAM_NATIVE_FULLSCREEN" || e.data === "CLEANSTREAM_NATIVE_FULLSCREEN")) {
+      const video = getActiveVideo();
+      if (video) openInNativeDevicePlayer(video);
+    }
+  });
+
+  function hookContainer() {
+    const cont = document.getElementById("cleanPlayer") || document.getElementById("playerCard");
+    if (cont && !cont._nativeFsHooked) {
+      cont._nativeFsHooked = true;
+      const origFs = cont.requestFullscreen || cont.webkitRequestFullscreen;
+      cont.requestFullscreen = function(opts) {
+        const video = getActiveVideo();
+        const { isIOS, isAndroid } = detectPlatform();
+        if ((isIOS || isAndroid) && video) {
+          return Promise.resolve(openInNativeDevicePlayer(video));
+        }
+        return origFs ? origFs.call(this, opts) : Promise.resolve();
+      };
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", hookContainer);
+  } else {
+    hookContainer();
+  }
+})();
