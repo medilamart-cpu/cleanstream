@@ -16,6 +16,23 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   
+  <!-- iOS AVPlayer & Native Fullscreen Bridge -->
+  <script>
+    (function() {
+      if (typeof HTMLVideoElement !== 'undefined') {
+        if (!HTMLVideoElement.prototype.webkitSetPresentationMode) {
+          HTMLVideoElement.prototype.webkitSetPresentationMode = function(mode) {
+            if (mode === 'fullscreen' && typeof this.webkitEnterFullscreen === 'function') {
+              this.webkitEnterFullscreen();
+            } else if (mode === 'inline' && typeof this.webkitExitFullscreen === 'function') {
+              this.webkitExitFullscreen();
+            }
+          };
+        }
+      }
+    })();
+  </script>
+
   <!-- Video.js 10 Player -->
   <script type="module" src="https://cdn.jsdelivr.net/npm/@videojs/cdn@10.2.0/video.js"></script>
   <script type="module" src="https://cdn.jsdelivr.net/npm/@videojs/cdn@10.2.0/media/hlsjs-video.js"></script>
